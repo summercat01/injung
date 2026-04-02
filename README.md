@@ -1,35 +1,44 @@
-# 인정협회
+# 🏅 인정협회
 
-> 당신의 주장, 인정? 노인정?
+> **당신의 주장, 인정? 노인정?**
 
-주장을 올리고 다른 사람들의 인정을 받아보세요.
-인정이면 인정, 아니면 노인정.
+<br />
 
-## 기술 스택
+## 인정협회가 뭐야?
 
-- **Framework**: Next.js 15 (App Router)
-- **Auth**: NextAuth.js v5 (Kakao, Google)
-- **Database**: PostgreSQL
-- **Styling**: Tailwind CSS v4
+주장을 올리면 다른 사람들이 **인정** 또는 **노인정**으로 투표해주는 서비스야.
+맞으면 인정, 틀리면 노인정. 그게 다야.
 
-## 시작하기
+<br />
 
-```bash
-npm install
-npm run dev
-```
+## 어떻게 써?
 
-환경변수 설정 (`.env.local`):
+1. **로그인** — 카카오 또는 구글로 간단하게
+2. **주장 올리기** — 하고 싶은 말 써서 올려봐
+3. **인정 or 노인정** — 다른 사람 주장에 투표해줘
+4. **인정률 확인** — 내 주장이 얼마나 인정받았는지 확인해봐
 
-```
-DATABASE_URL=
-AUTH_SECRET=
-AUTH_KAKAO_ID=
-AUTH_KAKAO_SECRET=
-AUTH_GOOGLE_ID=
-AUTH_GOOGLE_SECRET=
-```
+<br />
 
-## 개발자
+## 기능
 
-Developed by [SummerCat](https://github.com/summercat01)
+| 기능 | 설명 |
+|------|------|
+| 🗳️ 인정 / 노인정 투표 | 주장마다 실시간 투표 |
+| 📊 인정률 통계 | 인정률을 퍼센트로 확인 |
+| 🔥 정렬 필터 | 최신순 / 인기순 / 인정률높은순 / 치열한순 |
+| 👤 프로필 | 닉네임 + 이모지로 나만의 프로필 |
+
+<br />
+
+## 링크
+
+🔗 서비스 바로가기: [injung.semo3.com](https://injung.semo3.com)
+
+<br />
+
+---
+
+<p align="center">
+  Developed by <a href="https://github.com/summercat01">SummerCat</a>
+</p>
