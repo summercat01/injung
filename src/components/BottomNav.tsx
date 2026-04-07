@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 const navItems = [
   { href: '/', label: '홈', icon: 'home' },
-  { href: '/feed', label: '피드', icon: 'reorder' },
+  { href: '/feed', label: '게시판', icon: 'reorder' },
   { href: '/write', label: '글쓰기', icon: 'edit_document' },
   { href: '/profile', label: '프로필', icon: 'person' },
 ];

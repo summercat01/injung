@@ -45,8 +45,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: string;
           nickname: string | null;
           avatar_emoji: string;
+          is_admin: boolean;
         }>(
-          'SELECT id, nickname, avatar_emoji FROM users WHERE provider = $1 AND provider_id = $2',
+          'SELECT id, nickname, avatar_emoji, is_admin FROM users WHERE provider = $1 AND provider_id = $2',
           [provider, providerId]
         );
 
@@ -54,20 +55,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.userId = result.rows[0].id;
           token.nickname = result.rows[0].nickname;
           token.avatarEmoji = result.rows[0].avatar_emoji;
+          token.isAdmin = result.rows[0].is_admin;
         }
       } else if (token.userId && !token.nickname) {
         // nickname이 없으면 DB에서 다시 읽기 (온보딩 완료 후 반영)
         const result = await query<{
           nickname: string | null;
           avatar_emoji: string;
+          is_admin: boolean;
         }>(
-          'SELECT nickname, avatar_emoji FROM users WHERE id = $1',
+          'SELECT nickname, avatar_emoji, is_admin FROM users WHERE id = $1',
           [token.userId]
         );
 
         if (result.rows[0]) {
           token.nickname = result.rows[0].nickname;
           token.avatarEmoji = result.rows[0].avatar_emoji;
+          token.isAdmin = result.rows[0].is_admin;
         }
       }
       return token;
@@ -77,6 +81,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.user.id = token.userId as string;
       session.user.nickname = token.nickname as string | null;
       session.user.avatarEmoji = token.avatarEmoji as string;
+      session.user.isAdmin = (token.isAdmin as boolean) ?? false;
       return session;
     },
   },

@@ -50,7 +50,7 @@ export default async function HomePage() {
       <section className="space-y-4">
         <div className="flex items-end justify-between mb-2">
           <h3 className="text-2xl font-extrabold" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', color: '#201a16' }}>
-            어떻게 작동하나요?
+            인정협회란 무엇인가요?
           </h3>
         </div>
         <div className="grid grid-cols-1 gap-4">
@@ -82,6 +82,15 @@ export default async function HomePage() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="mt-8 rounded-2xl p-10 text-center relative overflow-hidden" style={{ background: '#ece0d9' }}>
+        <h3 className="text-3xl font-extrabold mb-4" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', color: '#201a16' }}>
+          인정 여부, 여기서 판단하세요.
+        </h3>
+        <p className="text-base leading-relaxed" style={{ color: '#58413d' }}>
+          엄격한 인정협회에서<br />공정하게 인정해 드립니다.
+        </p>
       </section>
 
       <Footer />

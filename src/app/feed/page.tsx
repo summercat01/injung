@@ -1,15 +1,18 @@
 import { Suspense } from 'react';
 import { auth } from '@/auth';
-import { getPosts, type SortMode } from '@/lib/posts';
+import { getPosts, getPostsCount, PAGE_SIZE, type SortMode } from '@/lib/posts';
+import { CATEGORIES } from '@/lib/categories';
 import PostCard from '@/components/PostCard';
 import FeedTabs from '@/components/FeedTabs';
+import CategoryFilter from '@/components/CategoryFilter';
+import Pagination from '@/components/Pagination';
 
 export const dynamic = 'force-dynamic';
 
 const VALID_SORTS: SortMode[] = ['최신순', '인기순', '인정률높은순', '치열한순'];
 
 interface FeedPageProps {
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<{ sort?: string; category?: string; page?: string }>;
 }
 
 export default async function FeedPage({ searchParams }: FeedPageProps) {
@@ -18,22 +21,38 @@ export default async function FeedPage({ searchParams }: FeedPageProps) {
     ? (params.sort as SortMode)
     : '최신순';
 
+  const category = CATEGORIES.includes(params.category as (typeof CATEGORIES)[number])
+    ? params.category
+    : undefined;
+
+  const page = Math.max(1, parseInt(params.page ?? '1') || 1);
+
   const session = await auth();
   const userId = session?.user?.id;
 
-  const posts = await getPosts(sort, userId);
+  const [posts, totalCount] = await Promise.all([
+    getPosts(sort, userId, category, page),
+    getPostsCount(sort, category),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
     <main className="max-w-lg mx-auto px-4 pt-5 pb-28">
-      <header className="mb-8 text-center space-y-2">
-        <span className="inline-block font-bold text-[10px] uppercase tracking-widest px-4 py-1 rounded-full" style={{ background: 'rgba(255,111,89,0.15)', color: '#ac3323', fontFamily: 'Manrope, sans-serif' }}>
-          🏅 인정협회 공식 심의
-        </span>
-        <h2 className="text-3xl font-extrabold leading-tight" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', color: '#201a16' }}>
-          이거 인정돼?
-        </h2>
-        <p className="text-sm" style={{ color: '#58413d' }}>읽고 판단해. 인정이면 인정, 아니면 노인정.</p>
+      <header className="mb-8">
+        <div className="rounded-2xl px-5 py-5 text-center" style={{ background: '#ac3323' }}>
+          <h1 className="text-2xl font-extrabold" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', color: 'white' }}>
+            인정 게시판
+          </h1>
+
+        </div>
       </header>
+
+      <div className="mb-3">
+        <Suspense fallback={null}>
+          <CategoryFilter current={category} />
+        </Suspense>
+      </div>
 
       <div className="mb-4">
         <Suspense fallback={null}>
@@ -57,10 +76,15 @@ export default async function FeedPage({ searchParams }: FeedPageProps) {
               key={post.id}
               post={post}
               isLoggedIn={!!session}
+              currentUserId={userId}
             />
           ))}
         </div>
       )}
+
+      <Suspense fallback={null}>
+        <Pagination currentPage={page} totalPages={totalPages} />
+      </Suspense>
     </main>
   );
 }

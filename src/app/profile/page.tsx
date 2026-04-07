@@ -104,7 +104,7 @@ export default async function ProfilePage() {
       ) : (
         <div className="flex flex-col gap-3">
           {posts.map((post) => (
-            <PostCard key={post.id} post={post} isLoggedIn={true} />
+            <PostCard key={post.id} post={post} isLoggedIn={true} currentUserId={userId} />
           ))}
         </div>
       )}

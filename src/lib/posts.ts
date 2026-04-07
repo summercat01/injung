@@ -1,10 +1,16 @@
 import { query } from './db';
+import { CATEGORIES } from './categories';
+
+export { CATEGORIES } from './categories';
+export type { Category } from './categories';
 
 export type SortMode = '최신순' | '인기순' | '인정률높은순' | '치열한순';
 
 export interface PostRow {
   id: string;
+  title: string;
   content: string;
+  category: string;
   created_at: string;
   user_id: string;
   nickname: string;
@@ -14,17 +20,61 @@ export interface PostRow {
   total_votes: number;
   agree_rate: number | null;
   my_vote: '인정' | '노인정' | null;
+  report_count: number;
+}
+
+export const PAGE_SIZE = 20;
+
+export async function getPostsCount(
+  sort: SortMode,
+  category?: string
+): Promise<number> {
+  const params: unknown[] = [];
+  let categoryWhere = '';
+  if (category) {
+    params.push(category);
+    categoryWhere = `AND p.category = $${params.length}`;
+  }
+
+  let having = '';
+  if (sort === '인정률높은순') having = 'HAVING COUNT(v.id) >= 1';
+  if (sort === '치열한순') {
+    const rateExpr = `ROUND(COUNT(v.id) FILTER (WHERE v.vote_type = '인정')::NUMERIC / NULLIF(COUNT(v.id), 0) * 100, 1)`;
+    having = `HAVING COUNT(v.id) >= 3`;
+  }
+
+  const sql = `
+    SELECT COUNT(*) FROM (
+      SELECT p.id
+      FROM posts p
+      JOIN users u ON u.id = p.user_id
+      LEFT JOIN votes v ON v.post_id = p.id
+      WHERE 1=1 ${categoryWhere}
+      GROUP BY p.id
+      ${having}
+    ) sub
+  `;
+  const result = await query<{ count: string }>(sql, params);
+  return parseInt(result.rows[0]?.count ?? '0');
 }
 
 export async function getPosts(
   sort: SortMode,
-  userId?: string
+  userId?: string,
+  category?: string,
+  page: number = 1
 ): Promise<PostRow[]> {
   const myVoteSql = userId
     ? `(SELECT vote_type FROM votes v2 WHERE v2.post_id = p.id AND v2.user_id = $1)`
     : `NULL`;
 
   const params: unknown[] = userId ? [userId] : [];
+
+  let categoryWhere = '';
+  if (category) {
+    params.push(category);
+    categoryWhere = `AND p.category = $${params.length}`;
+  }
 
   let orderBy: string;
   let having = '';
@@ -40,7 +90,7 @@ export async function getPosts(
     case '치열한순': {
       const rateExpr = `ROUND(COUNT(v.id) FILTER (WHERE v.vote_type = '인정')::NUMERIC / NULLIF(COUNT(v.id), 0) * 100, 1)`;
       orderBy = `ABS(${rateExpr} - 50) ASC NULLS LAST, p.created_at DESC`;
-      having = `HAVING COUNT(v.id) >= 10 AND ${rateExpr} BETWEEN 45 AND 55`;
+      having = `HAVING COUNT(v.id) >= 3`;
       break;
     }
     default:
@@ -50,7 +100,9 @@ export async function getPosts(
   const sql = `
     SELECT
       p.id,
+      p.title,
       p.content,
+      p.category,
       p.created_at,
       p.user_id,
       u.nickname,
@@ -62,14 +114,16 @@ export async function getPosts(
         THEN ROUND(COUNT(v.id) FILTER (WHERE v.vote_type = '인정')::NUMERIC / COUNT(v.id) * 100, 1)
         ELSE NULL
       END AS agree_rate,
-      ${myVoteSql} AS my_vote
+      ${myVoteSql} AS my_vote,
+      (SELECT COUNT(*) FROM reports r WHERE r.target_type = 'post' AND r.target_id = p.id) AS report_count
     FROM posts p
     JOIN users u ON u.id = p.user_id
     LEFT JOIN votes v ON v.post_id = p.id
+    WHERE 1=1 ${categoryWhere}
     GROUP BY p.id, u.nickname, u.avatar_emoji
     ${having}
     ORDER BY ${orderBy}
-    LIMIT 50
+    LIMIT ${PAGE_SIZE} OFFSET ${(page - 1) * PAGE_SIZE}
   `;
 
   const result = await query<PostRow>(sql, params);
@@ -89,7 +143,9 @@ export async function getPostById(
   const result = await query<PostRow>(
     `SELECT
       p.id,
+      p.title,
       p.content,
+      p.category,
       p.created_at,
       p.user_id,
       u.nickname,
@@ -101,7 +157,8 @@ export async function getPostById(
         THEN ROUND(COUNT(v.id) FILTER (WHERE v.vote_type = '인정')::NUMERIC / COUNT(v.id) * 100, 1)
         ELSE NULL
       END AS agree_rate,
-      ${myVoteSql} AS my_vote
+      ${myVoteSql} AS my_vote,
+      (SELECT COUNT(*) FROM reports r WHERE r.target_type = 'post' AND r.target_id = p.id) AS report_count
     FROM posts p
     JOIN users u ON u.id = p.user_id
     LEFT JOIN votes v ON v.post_id = p.id
@@ -148,7 +205,9 @@ export async function getUserPosts(userId: string): Promise<PostRow[]> {
   const result = await query<PostRow>(
     `SELECT
       p.id,
+      p.title,
       p.content,
+      p.category,
       p.created_at,
       p.user_id,
       u.nickname,
@@ -160,7 +219,8 @@ export async function getUserPosts(userId: string): Promise<PostRow[]> {
         THEN ROUND(COUNT(v.id) FILTER (WHERE v.vote_type = '인정')::NUMERIC / COUNT(v.id) * 100, 1)
         ELSE NULL
       END AS agree_rate,
-      NULL AS my_vote
+      NULL AS my_vote,
+      (SELECT COUNT(*) FROM reports r WHERE r.target_type = 'post' AND r.target_id = p.id) AS report_count
     FROM posts p
     JOIN users u ON u.id = p.user_id
     LEFT JOIN votes v ON v.post_id = p.id

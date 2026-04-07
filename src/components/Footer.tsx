@@ -6,9 +6,21 @@ export default function Footer() {
       <p className="text-xs" style={{ color: 'rgba(88,65,61,0.5)' }}>
         © 2026 인정협회
       </p>
-      <div className="flex justify-center gap-4 text-xs" style={{ color: 'rgba(88,65,61,0.5)' }}>
-        <Link href="/terms" className="hover:underline">이용약관</Link>
+      <div className="flex justify-center gap-4 text-xs">
+        <Link href="/terms" className="hover:underline" style={{ color: '#ac3323' }}>이용약관</Link>
       </div>
+      <p className="text-xs" style={{ color: 'rgba(88,65,61,0.5)' }}>
+        Developed by{' '}
+        <a
+          href="https://github.com/summercat01/injung"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline font-semibold"
+          style={{ color: '#ac3323' }}
+        >
+          SummerCat
+        </a>
+      </p>
     </footer>
   );
 }

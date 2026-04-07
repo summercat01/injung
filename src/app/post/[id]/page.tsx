@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { auth } from '@/auth';
 import { getPostById } from '@/lib/posts';
 import PostCard from '@/components/PostCard';
+import CommentSection from '@/components/CommentSection';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +31,8 @@ export default async function PostPage({ params }: PostPageProps) {
         </Link>
       </div>
 
-      <PostCard post={post} isLoggedIn={!!session} showLink={false} />
+      <PostCard post={post} isLoggedIn={!!session} showLink={false} currentUserId={userId} />
+      <CommentSection postId={post.id} postUserId={post.user_id} isLoggedIn={!!session} currentUserId={userId} />
     </main>
   );
 }

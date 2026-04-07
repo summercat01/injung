@@ -20,20 +20,23 @@ export default function FeedTabs({ current }: FeedTabsProps) {
   };
 
   return (
-    <div className="flex gap-1 rounded-xl p-1" style={{ backgroundColor: 'rgba(85,61,54,0.08)' }}>
-      {TABS.map((tab) => (
-        <button
-          key={tab}
-          onClick={() => handleTab(tab)}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
-            current === tab
-              ? 'bg-white text-brown shadow-sm'
-              : 'text-brown/50 hover:text-brown/80'
-          }`}
-        >
-          {tab}
-        </button>
-      ))}
+    <div className="rounded-2xl p-4" style={{ background: '#fef1ea' }}>
+      <p className="text-xs font-semibold mb-3" style={{ color: '#58413d' }}>필터</p>
+      <div className="flex gap-1 rounded-xl p-1" style={{ backgroundColor: 'rgba(85,61,54,0.08)' }}>
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => handleTab(tab)}
+            className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
+              current === tab
+                ? 'bg-white text-brown shadow-sm'
+                : 'text-brown/50 hover:text-brown/80'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
