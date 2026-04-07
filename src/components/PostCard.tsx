@@ -36,6 +36,18 @@ export default function PostCard({ post, isLoggedIn, showLink = true, currentUse
   const [isSaving, setIsSaving] = useState(false);
 
   const isOwner = !!currentUserId && localPost.user_id === currentUserId;
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    const url = `https://injung.semo3.com/post/${localPost.id}`;
+    if (navigator.share) {
+      await navigator.share({ title: localPost.content, url });
+    } else {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const agreeCount = Number(localPost.agree_count);
   const disagreeCount = Number(localPost.disagree_count);
@@ -232,13 +244,20 @@ export default function PostCard({ post, isLoggedIn, showLink = true, currentUse
                 {disagreeCount}
               </span>
             </div>
-            {agreeRate !== null ? (
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(172,51,35,0.1)', color: '#ac3323' }}>
-                인정률 {agreeRate}%
-              </span>
-            ) : (
-              <span className="text-xs" style={{ color: 'rgba(88,65,61,0.4)' }}>아직 투표 없음</span>
-            )}
+            <div className="flex items-center gap-2">
+              {agreeRate !== null ? (
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(172,51,35,0.1)', color: '#ac3323' }}>
+                  인정률 {agreeRate}%
+                </span>
+              ) : (
+                <span className="text-xs" style={{ color: 'rgba(88,65,61,0.4)' }}>아직 투표 없음</span>
+              )}
+              <button onClick={handleShare} className="flex items-center" title="공유">
+                <span className="material-symbols-outlined text-[16px]" style={{ color: copied ? '#ac3323' : 'rgba(88,65,61,0.5)' }}>
+                  {copied ? 'check' : 'share'}
+                </span>
+              </button>
+            </div>
           </div>
           {agreeRate !== null && (
             <div className="h-1 rounded-full overflow-hidden flex mt-2">
@@ -302,6 +321,14 @@ export default function PostCard({ post, isLoggedIn, showLink = true, currentUse
               </div>
             </div>
           )}
+          <button
+            onClick={handleShare}
+            className="mt-3 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+            style={{ background: 'rgba(172,51,35,0.08)', color: copied ? '#ac3323' : '#58413d' }}
+          >
+            <span className="material-symbols-outlined text-[14px]">{copied ? 'check' : 'share'}</span>
+            {copied ? '링크 복사됨!' : '공유하기'}
+          </button>
         </>
       )}
     </article>
