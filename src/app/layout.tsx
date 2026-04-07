@@ -7,6 +7,20 @@ import TopBar from '@/components/TopBar';
 export const metadata: Metadata = {
   title: '인정협회',
   description: '주장을 올리고 인정받아보세요. 인정 or 노인정?',
+  metadataBase: new URL('https://injung.semo3.com'),
+  openGraph: {
+    title: '인정협회',
+    description: '주장을 올리고 인정받아보세요. 인정 or 노인정?',
+    url: 'https://injung.semo3.com',
+    siteName: '인정협회',
+    locale: 'ko_KR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: '인정협회',
+    description: '주장을 올리고 인정받아보세요. 인정 or 노인정?',
+  },
 };
 
 export default function RootLayout({
