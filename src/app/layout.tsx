@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     description: '주장을 올리고 인정받아보세요. 인정 or 노인정?',
     url: 'https://injung.semo3.com',
     siteName: '인정협회',
-    images: [{ url: '/og-image.png', width: 512, height: 512 }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630 }],
     locale: 'ko_KR',
     type: 'website',
   },
