@@ -230,34 +230,33 @@ export default function PostCard({ post, isLoggedIn, showLink = true, currentUse
         </div>
       </div>
 
-      {/* Feed: compact vote summary */}
+      {/* Feed: vote buttons */}
       {showLink && (
         <div className="mt-1 pt-3 border-t" style={{ borderColor: '#f2e6df' }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1 text-sm font-semibold" style={{ color: '#ff6f59' }}>
-                <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>thumb_up</span>
-                {agreeCount}
+          <div className="flex gap-2">
+            <button
+              onClick={(e) => { e.preventDefault(); handleVote('인정'); }}
+              disabled={isVoting}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 disabled:opacity-50"
+              style={localPost.my_vote === '인정' ? { background: '#ff6f59', color: 'white' } : { background: '#ece0d9', color: '#58413d' }}
+            >
+              <span className="material-symbols-outlined text-[15px]" style={localPost.my_vote === '인정' ? { fontVariationSettings: "'FILL' 1" } : {}}>thumb_up</span>
+              인정 {agreeCount}
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); handleVote('노인정'); }}
+              disabled={isVoting}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 disabled:opacity-50"
+              style={localPost.my_vote === '노인정' ? { background: '#ac3323', color: 'white' } : { background: '#ece0d9', color: '#58413d' }}
+            >
+              <span className="material-symbols-outlined text-[15px]" style={localPost.my_vote === '노인정' ? { fontVariationSettings: "'FILL' 1" } : {}}>thumb_down</span>
+              노인정 {disagreeCount}
+            </button>
+            <button onClick={handleShare} className="flex items-center px-2" title="공유">
+              <span className="material-symbols-outlined text-[16px]" style={{ color: copied ? '#ac3323' : 'rgba(88,65,61,0.5)' }}>
+                {copied ? 'check' : 'share'}
               </span>
-              <span className="flex items-center gap-1 text-sm font-semibold" style={{ color: '#58413d' }}>
-                <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>thumb_down</span>
-                {disagreeCount}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              {agreeRate !== null ? (
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(172,51,35,0.1)', color: '#ac3323' }}>
-                  인정률 {agreeRate}%
-                </span>
-              ) : (
-                <span className="text-xs" style={{ color: 'rgba(88,65,61,0.4)' }}>아직 투표 없음</span>
-              )}
-              <button onClick={handleShare} className="flex items-center" title="공유">
-                <span className="material-symbols-outlined text-[16px]" style={{ color: copied ? '#ac3323' : 'rgba(88,65,61,0.5)' }}>
-                  {copied ? 'check' : 'share'}
-                </span>
-              </button>
-            </div>
+            </button>
           </div>
           {agreeRate !== null && (
             <div className="h-1 rounded-full overflow-hidden flex mt-2">
