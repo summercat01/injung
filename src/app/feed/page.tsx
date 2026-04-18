@@ -29,9 +29,10 @@ export default async function FeedPage({ searchParams }: FeedPageProps) {
 
   const session = await auth();
   const userId = session?.user?.id;
+  const isAdmin = session?.user?.isAdmin === true;
 
   const [posts, totalCount] = await Promise.all([
-    getPosts(sort, userId, category, page),
+    getPosts(sort, userId, category, page, isAdmin),
     getPostsCount(sort, category),
   ]);
 

@@ -25,6 +25,50 @@ export interface PostRow {
 
 export const PAGE_SIZE = 20;
 
+export const REPORT_HIDE_THRESHOLD = 10;
+
+/**
+ * Build a SQL CASE expression that redacts a content column when the target
+ * accumulates >= REPORT_HIDE_THRESHOLD reports. The author of the target and
+ * admins always see the original content.
+ *
+ * The threshold is coerced with `| 0` to guarantee an integer — the only
+ * safeguard if REPORT_HIDE_THRESHOLD ever becomes dynamic.
+ */
+export function redactedContentExpr(opts: {
+  contentColumn: string;           // e.g. 'p.content' or 'c.content'
+  targetIdColumn: string;          // e.g. 'p.id' or 'c.id'
+  authorIdColumn: string;          // e.g. 'p.user_id' or 'c.user_id'
+  targetType: 'post' | 'comment';
+  viewerParamIndex: number;        // 0 when no viewer
+  isAdmin: boolean;
+  redactedText: string;            // e.g. '[신고 누적으로 숨겨진 게시물입니다]'
+}): string {
+  if (opts.isAdmin) return opts.contentColumn;
+  const threshold = REPORT_HIDE_THRESHOLD | 0;
+  const authorCondition = opts.viewerParamIndex > 0
+    ? `${opts.authorIdColumn} = $${opts.viewerParamIndex}`
+    : 'FALSE';
+  return `CASE
+    WHEN (SELECT COUNT(*) FROM reports r WHERE r.target_type = '${opts.targetType}' AND r.target_id = ${opts.targetIdColumn}) >= ${threshold}
+      AND NOT (${authorCondition})
+    THEN '${opts.redactedText.replace(/'/g, "''")}'
+    ELSE ${opts.contentColumn}
+  END`;
+}
+
+function postContentExpr(viewerParamIndex: number, isAdmin: boolean): string {
+  return redactedContentExpr({
+    contentColumn: 'p.content',
+    targetIdColumn: 'p.id',
+    authorIdColumn: 'p.user_id',
+    targetType: 'post',
+    viewerParamIndex,
+    isAdmin,
+    redactedText: '[신고 누적으로 숨겨진 게시물입니다]',
+  });
+}
+
 export async function getPostsCount(
   sort: SortMode,
   category?: string
@@ -38,10 +82,7 @@ export async function getPostsCount(
 
   let having = '';
   if (sort === '인정률높은순') having = 'HAVING COUNT(v.id) >= 1';
-  if (sort === '치열한순') {
-    const rateExpr = `ROUND(COUNT(v.id) FILTER (WHERE v.vote_type = '인정')::NUMERIC / NULLIF(COUNT(v.id), 0) * 100, 1)`;
-    having = `HAVING COUNT(v.id) >= 3`;
-  }
+  if (sort === '치열한순') having = 'HAVING COUNT(v.id) >= 3';
 
   const sql = `
     SELECT COUNT(*) FROM (
@@ -62,13 +103,19 @@ export async function getPosts(
   sort: SortMode,
   userId?: string,
   category?: string,
-  page: number = 1
+  page: number = 1,
+  isAdmin: boolean = false
 ): Promise<PostRow[]> {
-  const myVoteSql = userId
-    ? `(SELECT vote_type FROM votes v2 WHERE v2.post_id = p.id AND v2.user_id = $1)`
-    : `NULL`;
+  const params: unknown[] = [];
+  let viewerParamIndex = 0;
+  if (userId) {
+    params.push(userId);
+    viewerParamIndex = params.length;
+  }
 
-  const params: unknown[] = userId ? [userId] : [];
+  const myVoteSql = userId
+    ? `(SELECT vote_type FROM votes v2 WHERE v2.post_id = p.id AND v2.user_id = $${viewerParamIndex})`
+    : `NULL`;
 
   let categoryWhere = '';
   if (category) {
@@ -97,11 +144,16 @@ export async function getPosts(
       orderBy = 'p.created_at DESC';
   }
 
+  params.push(PAGE_SIZE);
+  const limitParamIndex = params.length;
+  params.push((page - 1) * PAGE_SIZE);
+  const offsetParamIndex = params.length;
+
   const sql = `
     SELECT
       p.id,
       p.title,
-      p.content,
+      ${postContentExpr(viewerParamIndex, isAdmin)} AS content,
       p.category,
       p.created_at,
       p.user_id,
@@ -123,7 +175,7 @@ export async function getPosts(
     GROUP BY p.id, u.nickname, u.avatar_emoji
     ${having}
     ORDER BY ${orderBy}
-    LIMIT ${PAGE_SIZE} OFFSET ${(page - 1) * PAGE_SIZE}
+    LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
   `;
 
   const result = await query<PostRow>(sql, params);
@@ -132,19 +184,25 @@ export async function getPosts(
 
 export async function getPostById(
   postId: string,
-  userId?: string
+  userId?: string,
+  isAdmin: boolean = false
 ): Promise<PostRow | null> {
-  const myVoteSql = userId
-    ? `(SELECT vote_type FROM votes v2 WHERE v2.post_id = p.id AND v2.user_id = $2)`
-    : `NULL`;
+  const params: unknown[] = [postId];
+  let viewerParamIndex = 0;
+  if (userId) {
+    params.push(userId);
+    viewerParamIndex = params.length;
+  }
 
-  const params: unknown[] = userId ? [postId, userId] : [postId];
+  const myVoteSql = userId
+    ? `(SELECT vote_type FROM votes v2 WHERE v2.post_id = p.id AND v2.user_id = $${viewerParamIndex})`
+    : `NULL`;
 
   const result = await query<PostRow>(
     `SELECT
       p.id,
       p.title,
-      p.content,
+      ${postContentExpr(viewerParamIndex, isAdmin)} AS content,
       p.category,
       p.created_at,
       p.user_id,
@@ -202,6 +260,7 @@ export async function getUserStats(userId: string) {
 }
 
 export async function getUserPosts(userId: string): Promise<PostRow[]> {
+  // viewer is always the owner here → content never redacted (authorCondition true).
   const result = await query<PostRow>(
     `SELECT
       p.id,

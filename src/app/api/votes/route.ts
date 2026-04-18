@@ -1,25 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
 import { query } from '@/lib/db';
+import { requireActiveUser, isUuid } from '@/lib/guards';
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-  }
-
-  if (!session.user.nickname) {
-    return NextResponse.json({ error: '닉네임 설정이 필요합니다.' }, { status: 403 });
-  }
+  const guard = await requireActiveUser();
+  if (!guard.ok) return guard.response;
+  const { userId } = guard;
 
   const { postId, voteType } = await req.json();
 
-  if (!postId || !['인정', '노인정'].includes(voteType)) {
+  if (!isUuid(postId)) {
+    return NextResponse.json({ error: '잘못된 postId 형식입니다.' }, { status: 400 });
+  }
+  if (!['인정', '노인정'].includes(voteType)) {
     return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 });
   }
-
-  const userId = session.user.id;
 
   // Check if user already voted
   const existing = await query<{ id: string; vote_type: string }>(

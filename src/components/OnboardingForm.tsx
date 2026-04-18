@@ -2,11 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-
-const EMOJI_OPTIONS = [
-  '🙂', '😎', '🤔', '😤', '🥸', '🤓', '😏', '🥹',
-  '🤩', '🫡', '🤪', '😈', '🧐', '🫠', '😇', '🤯',
-];
+import { EMOJI_OPTIONS } from '@/lib/emojis';
 
 export default function OnboardingForm() {
   const router = useRouter();
