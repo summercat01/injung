@@ -15,8 +15,9 @@ export default async function PostPage({ params }: PostPageProps) {
   const { id } = await params;
   const session = await auth();
   const userId = session?.user?.id;
+  const isAdmin = session?.user?.isAdmin === true;
 
-  const post = await getPostById(id, userId);
+  const post = await getPostById(id, userId, isAdmin);
 
   if (!post) notFound();
 

@@ -1,19 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { query } from '@/lib/db';
+import { requireActiveUser, isUuid } from '@/lib/guards';
+import { redactedContentExpr } from '@/lib/posts';
 
 export async function GET(req: NextRequest) {
   const postId = req.nextUrl.searchParams.get('postId');
   if (!postId) {
     return NextResponse.json({ error: 'postId가 필요합니다.' }, { status: 400 });
   }
+  if (!isUuid(postId)) {
+    return NextResponse.json({ error: '잘못된 postId 형식입니다.' }, { status: 400 });
+  }
 
   const session = await auth();
   const userId = session?.user?.id ?? null;
+  const isAdmin = session?.user?.isAdmin === true;
 
-  const myVoteSql = userId
-    ? `(SELECT type FROM comment_likes cl WHERE cl.comment_id = c.id AND cl.user_id = '${userId}')`
-    : `NULL`;
+  const params: unknown[] = [postId];
+  let viewerParamIndex = 0;
+  let myVoteSql = 'NULL';
+  if (userId) {
+    params.push(userId);
+    viewerParamIndex = params.length;
+    myVoteSql = `(SELECT type FROM comment_likes cl WHERE cl.comment_id = c.id AND cl.user_id = $${viewerParamIndex})`;
+  }
+
+  const contentExpr = redactedContentExpr({
+    contentColumn: 'c.content',
+    targetIdColumn: 'c.id',
+    authorIdColumn: 'c.user_id',
+    targetType: 'comment',
+    viewerParamIndex,
+    isAdmin,
+    redactedText: '[신고 누적으로 숨겨진 댓글입니다]',
+  });
 
   const result = await query<{
     id: string;
@@ -26,8 +47,11 @@ export async function GET(req: NextRequest) {
     up_count: string;
     down_count: string;
     my_vote: string | null;
+    report_count: string;
   }>(
-    `SELECT c.id, c.user_id, c.parent_id, u.nickname, u.avatar_emoji, c.content, c.created_at,
+    `SELECT c.id, c.user_id, c.parent_id, u.nickname, u.avatar_emoji,
+       ${contentExpr} AS content,
+       c.created_at,
        COUNT(cl.user_id) FILTER (WHERE cl.type = 'up') AS up_count,
        COUNT(cl.user_id) FILTER (WHERE cl.type = 'down') AS down_count,
        ${myVoteSql} AS my_vote,
@@ -38,34 +62,26 @@ export async function GET(req: NextRequest) {
      WHERE c.post_id = $1
      GROUP BY c.id, u.nickname, u.avatar_emoji
      ORDER BY c.created_at ASC`,
-    [postId]
+    params
   );
 
   return NextResponse.json(result.rows);
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-  }
-
-  if (!session.user.nickname) {
-    return NextResponse.json({ error: '닉네임 설정이 필요합니다.' }, { status: 403 });
-  }
-
-  const banCheck = await query<{ is_banned: boolean }>(
-    'SELECT is_banned FROM users WHERE id = $1',
-    [session.user.id]
-  );
-  if (banCheck.rows[0]?.is_banned) {
-    return NextResponse.json({ error: '이용이 제한된 계정입니다.' }, { status: 403 });
-  }
+  const guard = await requireActiveUser();
+  if (!guard.ok) return guard.response;
+  const { session, userId } = guard;
 
   const { postId, content, parentId } = await req.json();
 
-  if (!postId || !content || typeof content !== 'string') {
+  if (!isUuid(postId)) {
+    return NextResponse.json({ error: '잘못된 postId 형식입니다.' }, { status: 400 });
+  }
+  if (parentId !== undefined && parentId !== null && !isUuid(parentId)) {
+    return NextResponse.json({ error: '잘못된 parentId 형식입니다.' }, { status: 400 });
+  }
+  if (!content || typeof content !== 'string') {
     return NextResponse.json({ error: '내용을 입력해주세요.' }, { status: 400 });
   }
 
@@ -78,12 +94,12 @@ export async function POST(req: NextRequest) {
     `INSERT INTO comments (post_id, user_id, parent_id, content)
      VALUES ($1, $2, $3, $4)
      RETURNING id, created_at`,
-    [postId, session.user.id, parentId ?? null, trimmed]
+    [postId, userId, parentId ?? null, trimmed]
   );
 
   return NextResponse.json({
     id: result.rows[0].id,
-    user_id: session.user.id,
+    user_id: userId,
     parent_id: parentId ?? null,
     nickname: session.user.nickname,
     avatar_emoji: session.user.avatarEmoji ?? '🙂',

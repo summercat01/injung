@@ -1,26 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
 import { query } from '@/lib/db';
 import { CATEGORIES } from '@/lib/categories';
+import { requireActiveUser } from '@/lib/guards';
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-  }
-
-  if (!session.user.nickname) {
-    return NextResponse.json({ error: '닉네임 설정이 필요합니다.' }, { status: 403 });
-  }
-
-  const banCheck = await query<{ is_banned: boolean }>(
-    'SELECT is_banned FROM users WHERE id = $1',
-    [session.user.id]
-  );
-  if (banCheck.rows[0]?.is_banned) {
-    return NextResponse.json({ error: '이용이 제한된 계정입니다.' }, { status: 403 });
-  }
+  const guard = await requireActiveUser();
+  if (!guard.ok) return guard.response;
+  const { userId } = guard;
 
   const { content, category } = await req.json();
 
@@ -37,7 +23,7 @@ export async function POST(req: NextRequest) {
 
   const result = await query<{ id: string }>(
     'INSERT INTO posts (user_id, content, category) VALUES ($1, $2, $3) RETURNING id',
-    [session.user.id, trimmed, validCategory]
+    [userId, trimmed, validCategory]
   );
 
   return NextResponse.json({ id: result.rows[0].id }, { status: 201 });
